@@ -2,6 +2,7 @@ import socket
 from string import strip
 from json import dumps as package
 from constants import HTTP_VERS, HTTP_CODES
+from sys import stdout
 
 def make_server(ip, port, conq):
     s = socket.socket()
@@ -39,19 +40,13 @@ def send_response(client, address, response_dict):
     client.send(headers + '\r\n\r\n')
     client.send(response_dict['message'])
 
-if __name__ == "__main__":
-    from constants import IP, PORT, CONQ, CHUNK
-    from sys import stdout
-
-    def test():
+def serve_forever(ip, port, conq, chunk, handler):
         s = make_server(IP, PORT, CONQ)
-        html = '<html><body><h1>Hello World!</h1></body></html>'
-        typ = 'text/html'
         try:
             while True:
                 c, a = s.accept()
-                parse_request(c, a, CHUNK)
-                response_dict = {'code':'200', 'message':html, 'headers':{'Content-Length':str(len(html)), 'Content-Type':typ}}
+                request_dict = parse_request(c, a, CHUNK)
+                response_dict = handler(request_dict)
                 send_response(c, a, response_dict)
                 c.close()
         except KeyboardInterrupt:
@@ -64,5 +59,16 @@ if __name__ == "__main__":
                     sock.close()
                 except:
                     pass
-            
-    test()
+
+if __name__ == "__main__":
+    from constants import IP, PORT, CONQ, CHUNK
+    
+    def handler(request_dict):
+        #Normally, you would actually look at the contents of
+        #request_dict and determine create your response_dict
+        #from that. This is just a demo.
+        html = '<html><body><h1>Hello World!</h1></body></html>'
+        typ = 'text/html'
+        return {'code':'200', 'message':html, 'headers':{'Content-Type':typ, 'Content-Length':str(len(html))}}
+
+    serve_forever(IP, PORT, CONQ, CHUNK, handler)
