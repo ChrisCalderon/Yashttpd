@@ -1,9 +1,7 @@
 import socket
 from string import strip
 from json import dumps as package
-from sys import stdout
 from constants import HTTP_VERS, HTTP_CODES
-
 
 def make_server(ip, port, conq):
     s = socket.socket()
@@ -43,6 +41,7 @@ def send_response(client, address, response_dict):
 
 if __name__ == "__main__":
     from constants import IP, PORT, CONQ, CHUNK
+    from sys import stdout
 
     def test():
         s = make_server(IP, PORT, CONQ)
@@ -61,8 +60,8 @@ if __name__ == "__main__":
             print 'shutting down'
             for sock in [c, s]:
                 try:
-                    c.shutdown(socket.SHUT_RDWR)
-                    c.close()
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
                 except:
                     pass
             
