@@ -36,16 +36,16 @@ def send_response(client, address, response_dict):
     code_msg = HTTP_CODES[int(code)][0]
     response = HTTP_VERS + ' ' +  code + ' ' + code_msg + '\r\n'
     client.send(response)
-    headers = '\r\n'.join(': '.join(item) for item in response_dict['headers'].items())
+    headers = '\r\n'.join(': '.join(item) for item in response_dict.get('headers', {}).items())
     client.send(headers + '\r\n\r\n')
-    client.send(response_dict['message'])
+    client.send(response_dict.get('message', ''))
 
 def serve_forever(ip, port, conq, chunk, handler):
-        s = make_server(IP, PORT, CONQ)
+        s = make_server(ip, port, conq)
         try:
             while True:
                 c, a = s.accept()
-                request_dict = parse_request(c, a, CHUNK)
+                request_dict = parse_request(c, a, chunk)
                 response_dict = handler(request_dict)
                 send_response(c, a, response_dict)
                 c.close()
