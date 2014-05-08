@@ -15,7 +15,6 @@ def make_server(ip, port, conq, blocking=True, verbose=True, speedy=False):
     s = socket()
     if not blocking:
         #I must remember to set every client socket to non-blocking
-        #The following two comments are not true!
         s.setblocking(0)
     if speedy:
         #Tell the OS to not buffer our sends, but to send immediately.
