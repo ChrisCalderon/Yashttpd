@@ -1,15 +1,16 @@
 ###############################################################################
 from socket import socket, SOL_SOCKET, SO_REUSEADDR, error as sock_err
+from socket import IPPROTO_TCP, TCP_NODELAY, SHUT_RDWR
 from errno import EAGAIN, EWOULDBLOCK
 from sys import stdout, exit
 from string import strip
 from json import dumps as package
 from constants import HTTP_VERS, HTTP_CODES
-from select import select
+from select import epoll, EPOLLIN, EPOLLET
 
 SMALLEST_CHUNK = 4096
 
-def make_server(ip, port, conq, blocking=True, verbose=True):
+def make_server(ip, port, conq, blocking=True, verbose=True, speedy=False):
     """Make a socket for the server."""
     s = socket()
     if not blocking:
@@ -18,6 +19,10 @@ def make_server(ip, port, conq, blocking=True, verbose=True):
         #Making the server socket non-blocking makes 
         #all the clients non-blocking too!
         s.setblocking(0)
+    if speedy:
+        #Tell the OS to not buffer our sends, but to send immediately.
+        #This is for realtime junk.
+        s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
     s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     s.bind((ip, port))
     s.listen(conq)
@@ -102,28 +107,64 @@ def send_response(client, address, response_dict):
     #Aparently i only get one send with non blocking sockets.
     client.send(response+headers+'\r\n\r\n'+response_dict.get('message',''))
 
+def get_clients(s, mapping, ep):
+    try:
+        while True:
+            client, addr = s.accept()
+            client.setblocking(0)
+            fd = client.fileno()
+            mapping[fd] = client, addr
+            ep.register(fd, EPOLLIN|EPOLLET)
+    except sock_err:
+        pass
+
+def handle_it(handler, mapping, fd, sock, addr, ep, chunk):
+    request_dict = parse_request(sock, addr, chunk)
+    #there was an error parsing.
+    if len(request_dict) == 1:
+        send_response(sock, addr, request_dict)
+    else:
+        response_dict = handler(request_dict)
+        send_response(sock, addr, response_dict)
+        #You can decide whether or not to keep you connection alive.
+        if response_dict.get('headers', {}).get('Connection','')=='Keep-Alive':
+            return
+    ep.unregister(fd)
+    sock.close()
+    del mapping[fd]
+
 def serve_forever(ip, port, conq, chunk, handler):
         s = make_server(ip, port, conq, blocking=False)
+        fds_2_sockets = {s.fileno():(s, (ip, port))}
+        ep = epoll()
+        ep.register(s.fileno(), EPOLLIN|EPOLLET)
         try:
             while True:
-                readable, writeable, errors_maybe = select([s],[],[])
-                c, a = s.accept()
-                c.setblocking(0)
-                request_dict = parse_request(c, a, chunk)
-                #If the request dict only has 1 key, it is an error code
-                if len(request_dict) == 1:
-                    send_response(c, a, request_dict)
-                else:
-                    response_dict = handler(request_dict)
-                    send_response(c, a, response_dict)
-                c.close()
+                events = ep.poll()
+                for fd, event in events:
+                    #The only sockets added to the epoll are the ones we
+                    #put both there and in our mapping.
+                    sock, addr = fds_2_sockets[fd]
+                    #if sock is the server socket...
+                    if sock == s:
+                        get_clients(s, fds_2_sockets, ep)
+                    #if this isn't the server sock, but a client socket
+                    #ready to read, let get this started!
+                    elif event&EPOLLIN:
+                        handle_it(handler,
+                                  fds_2_sockets,
+                                  fd,
+                                  sock,
+                                  addr,
+                                  ep,
+                                  chunk)
         except KeyboardInterrupt:
             stdout.write("\r")
             stdout.flush()
             print 'shutting down'
-            for sock in [c, s]:
+            for sock in fds_2_sockets.values():
                 try:
-                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.shutdown(SHUT_RDWR)
                     sock.close()
                 except:
                     pass
