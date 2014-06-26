@@ -1,4 +1,4 @@
-import os, mimetypes, time, socket
+import mimetypes, time, socket, os
 ERROR = """\
 <html>
 <body>
@@ -11,43 +11,44 @@ HTTP/1.1 {} {}\r
 Server: yashttpd\r
 Date: %a, %d %b %Y %H:%M:%S GMT\r
 Accept-Ranges: bytes\r
+Connection: keep-alive\r
 '''
+class ResponseError(Exception): pass
+
 def sender(client, response):
     """Generates and sends a response to the client. The response
     argument to this function must be a JSON object."""
-    ## The default behavior for HTTP/1.1 is to keep connection alive
-    if 'error' in response:
-        code = response['error']
-        if type(code)!=int or code not in HTTP_CODES:
-            return
-        status, description = HTTP_CODES[code]
-        start = time.strftime(COMMON.format(code, status), time.gmtime())
-        page = ERROR % (code, status, description)
-        typ = "Content-Type: text/html\r\n"
-        length = "Content-Length: %d\r\n\r\n" % len(page)
-        client.send(start+typ+length+page)
-        return
-    if 'file' in response:
-        path = response['file']
-        if type(path)!=str or not os.path.exists(path):
-            return
-        start = time.strftime(COMMON.format(200,'OK'), time.gmtime())
-        typ, encode = mimetypes.guesstype(path)
-        typ = "Content-Type: %s\r\n" % typ
-        if encode is None:
-            encode = ''
-        else:
-            encode = "Content-Encoding: %s\r\n" % encode
-        size = os.path.getsize(path)
-        length = "Content-Length: %d\r\n\r\n" % size
-        client.send(start+typ+encode+length)
-        step = client.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-        f = open(path)
-        for i in xrange(0,size,step):
-          client.send(f.read(step))
-        return 1
-    
 
+    if response['type'] == 'error':
+        code = response['value']
+    else:
+        code = response['code']
+    status, description = HTTP_CODES[code]
+    headers = time.strftime(COMMON.format(code, status), time.gmtime())
+    if response['type'] == 'error':
+        content = ERROR % (code, status, description)
+    else:
+        content = response['content']
+    if type(content)==str:
+        l = len(content)
+    elif type(content)==file:
+        l = os.path.getsize(content.name)
+    response['headers'].update({'Content-Length':str(l)})
+    headers += '\r\n'.join(': '.join(i) for i in response['headers'].items()) + '\r\n\r\n'
+    #client.send(headers)
+    if type(content)==str:
+        print 'sending:'
+        print headers+content
+        client.send(headers+content)
+        if response['type']=='error':
+            return 0
+    elif type(content)==file:
+        client.send(headers)
+        data = content.read(2048)
+        while data:
+            client.send(data)
+            data = client.read(2048)
+    return 1
 
 #Copied these codes verbatim from line 512 of
 #http://hg.python.org/cpython/file/2.7/Lib/BaseHTTPServer.py

@@ -1,9 +1,9 @@
 import socket, errno, collections, re
 
 REQUEST = re.compile(
-    r"^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) "
-    r"(?P<path>/.+?) "
-    r"(?P<version>HTTP/1\.1|HTTP/1\.0)\r\n"
+    "^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) "
+    "/(?P<path>.*?) "
+    "(?P<version>HTTP/1\.1)\r\n"
 )
 MULTILINE = re.compile(r"\r\n\s+")
 HEADERS = re.compile(r"(?P<name>[\w\-]*?):\s+(?P<value>.*?)\r\n")
@@ -21,40 +21,48 @@ def reader(client):
         except socket.error as e:
             err = e.args[0]
             if err not in [errno.EAGAIN,errno.EWOULDBLOCK]:
-                return {"error": "bad"}
+                return {"type":"error", "value":"bad"}
         else:
             break
 
     ## This checks for a proper request line and parses it
     ## at the same time. If there is no proper request line,
     ## an error is returned.
-    request_check = REQUEST.match(message)
+    request_check = REQUEST.search(message)
     if request_check is None:
-        return {'error':400}
+        print 'failed request_check'
+        print message
+        return {"type":"error", "value":400}
 
     ## This makes sure there is an end to the headers in the
     ## request. If there isn't, and error is returned!
-    header_end = message.find('\r\n\r\n')
+    header_end = message.find("\r\n\r\n")
     if header_end == -1:
-        return {'error':400}
+        print 'no header end'
+        return {"type":"error", "value":400}
 
     ## Next, any headers spanning multiple lines are turned
     ## into headers spanning one line only. 
     def repl(match):
         a, b = match.span()
         if b <= header_end:
-            return ','
+            return ","
         else:
             return message[a:b]
     message = MULTILINE.sub(repl, message)
 
     request = collections.defaultdict(dict,request_check.groupdict())
+    request["type"] = "request"
     last_match_end = request_check.span()[1]
     for match in HEADERS.finditer(message):
         match_start, match_end = match.span()
         ## It is bad to have junk between headers!
-        if match_start != last_match_end+1:
-            return {'error':400}
+        if match_start != last_match_end:
+            print 'junk between headers'
+            print last_match_end, match_start
+            print message[:last_match_end]
+            print message[match_start:match_end]
+            return {"type":"error", "value":400}
         ## don't look past the end of the headers
         if match.span()[1] <= header_end+2:
             request['headers'].update([match.groups()])
@@ -66,3 +74,13 @@ def reader(client):
     ## This might be empty!!!
     request['entity'] = message[header_end+4:]
     return request
+
+if __name__ == "__main__":
+    import linux
+    f = lambda *x: None
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('',8080))
+    s.listen(5)
+
+    linux.server_loop(s, reader, f, f)
