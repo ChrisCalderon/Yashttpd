@@ -3,10 +3,11 @@ import json
 
 def handler(request):
 	print 'in handler!'
+        response = {'code':200}
 	if 'favicon' in request['path']:
-		return 404
-	response = {'code':200}
-	body = '''\
+		response['content'] = open('favicon.png')
+        else:
+                body = '''\
 <html>
 <body>
 <h1>ECHO SERVER</h1>
@@ -16,9 +17,9 @@ def handler(request):
 </code>
 </body>
 </html>'''
-        data = json.dumps(request, indent=4, sort_keys=True).replace('\n', '<br>\n').replace(' '*4, '&nbsp;'*4)
-	response['content'] = body.format(data)
-	response['headers'] = {'Content-Type':'text/html'}
+                data = json.dumps(request, indent=4, sort_keys=True).replace('\n', '<br>\n').replace(' '*4, '&nbsp;'*4)
+                response['headers'] = {'Content-Type':'text/html'}
+                response['content'] = body.format(data)
 	return response
 
 yashttpd.yashttpd(handler, host='', port=8080)

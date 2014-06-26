@@ -13,8 +13,6 @@ Date: %a, %d %b %Y %H:%M:%S GMT\r
 Accept-Ranges: bytes\r
 Connection: keep-alive\r
 '''
-class ResponseError(Exception): pass
-
 def sender(client, response):
     """Generates and sends a response to the client. The response
     argument to this function must be a JSON object."""
@@ -33,9 +31,13 @@ def sender(client, response):
         l = len(content)
     elif type(content)==file:
         l = os.path.getsize(content.name)
-    response['headers'].update({'Content-Length':str(l)})
+        typ, encoding = mimetypes.guess_type(content.name)
+        typ = typ if typ else '*/*'
+        response['headers']['Content-Type'] = typ
+        if encoding:
+            response['headers']['Content-Encoding'] = encoding
+    response['headers']['Content-Length'] = str(l)
     headers += '\r\n'.join(': '.join(i) for i in response['headers'].items()) + '\r\n\r\n'
-    #client.send(headers)
     if type(content)==str:
         print 'sending:'
         print headers+content
@@ -47,7 +49,7 @@ def sender(client, response):
         data = content.read(2048)
         while data:
             client.send(data)
-            data = client.read(2048)
+            data = content.read(2048)
     return 1
 
 #Copied these codes verbatim from line 512 of
