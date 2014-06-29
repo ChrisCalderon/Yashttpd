@@ -1,0 +1,50 @@
+<html>
+<head>
+<link href="http://google-code-prettify.googlecode.com/svn/trunk/src/prettify.css" rel="stylesheet" type="text/css"/>
+<script src="http://google-code-prettify.googlecode.com/svn/trunk/src/prettify.js" type="text/javascript"></script>
+</head>
+<body onload="prettyPrint()">
+<pre class="prettyprint linenums">
+import yashttpd
+import json
+from string import punctuation as p
+
+format_junk = p[-4] + '1' + p[-2]
+
+files = [
+&nbsp;&nbsp;&nbsp;&nbsp;'generate_code.py.html',
+&nbsp;&nbsp;&nbsp;&nbsp;{0},
+]
+
+def handler(request):
+&nbsp;&nbsp;&nbsp;&nbsp;print 'in handler!'
+&nbsp;&nbsp;&nbsp;&nbsp;response = dict(code=200)
+&nbsp;&nbsp;&nbsp;&nbsp;if 'favicon' in request['path']:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = open('favicon.png')
+&nbsp;&nbsp;&nbsp;&nbsp;elif request['path'] in files:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = open(request['path'])
+&nbsp;&nbsp;&nbsp;&nbsp;else:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;body = '''\
+&lt;html&gt;
+&lt;body style=&quot;text-align:center;&quot;&gt;
+&lt;a href=&quot;https://github.com/ChrisCalderon&quot;&gt;&lt;img style=&quot;position: absolute; top: 0; right: 0; border: 0;&quot; src=&quot;https://camo.githubusercontent.com/a6677b08c955af8400f44c6298f40e7d19cc5b2d/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677261795f3664366436642e706e67&quot; alt=&quot;Fork me on GitHub&quot; data-canonical-src=&quot;https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png&quot;&gt;&lt;/a&gt;
+&lt;h1&gt;ECHO SERVER&lt;/h1&gt;
+&lt;p&gt;This is how your request was parsed:&lt;/p&gt;
+&lt;code&gt;
+%s
+&lt;/code&gt;
+&lt;p&gt;The code for adding links to scripts on this homepage is &lt;a href=&quot;generate_code.py.html&quot;&gt;here&lt;/a&gt;!&lt;/p&gt;
+{1}
+&lt;/body&gt;
+&lt;/html&gt;'''
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data = json.dumps(request, indent=4, sort_keys=True).replace('\n', '&lt;br&gt;\n').replace(' '*4, '&nbsp;'*4)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['headers'] = dict()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['headers']['Content-Type'] = 'text/html'
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = body.replace(format_junk, '') % data
+&nbsp;&nbsp;&nbsp;&nbsp;return response
+
+yashttpd.yashttpd(handler, host='0.0.0.0', port=80)
+
+</pre>
+</body>
+</html>

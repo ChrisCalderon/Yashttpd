@@ -17,7 +17,12 @@ def sender(client, response):
     """Generates and sends a response to the client. The response
     argument to this function must be a JSON object."""
 
-    if response['type'] == 'error':
+    #if response['type'] == 'keepalive':
+    #    client.send('')
+    #    return 1
+    if response['type'] == 'error' and response['value']=='bad':
+        return 0
+    elif response['type'] == 'error':
         code = response['value']
     else:
         code = response['code']

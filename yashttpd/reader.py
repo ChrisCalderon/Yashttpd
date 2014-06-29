@@ -1,4 +1,4 @@
-import socket, errno, collections, re
+import socket, errno, collections, re, logging
 
 REQUEST = re.compile(
     "^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) "
@@ -21,10 +21,13 @@ def reader(client):
         except socket.error as e:
             err = e.args[0]
             if err not in [errno.EAGAIN,errno.EWOULDBLOCK]:
+                logging.exception(e)
                 return {"type":"error", "value":"bad"}
         else:
             break
 
+    #if message.strip()=="":
+    #    return {"type":"keepalive", "value":None}
     ## This checks for a proper request line and parses it
     ## at the same time. If there is no proper request line,
     ## an error is returned.

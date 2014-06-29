@@ -6,6 +6,8 @@ def error_bypass(handler):
         if data['type'] == 'error':
             data['headers'] = {}
             return data
+        #if data['type']=='keepalive':
+        #    return data
         result = handler(data)
         if type(result)==dict:
             result['type'] = 'response'
