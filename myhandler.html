@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="http://google-code-prettify.googlecode.com/svn/trunk/src/prettify.css" rel="stylesheet" type="text/css">
+<script src="http://google-code-prettify.googlecode.com/svn/trunk/src/prettify.js" type="text/javascript"></script>
+</head>
+<body onload="prettyPrint()">
+<pre class="prettyprint linenums">
+#!/usr/bin/python
+import yashttpd, json, os
+
+whitelist = eval(open('whitelist').read())
+path_exists = os.path.exists
+time_modified = os.path.getmtime
+
+def handler(request):
+&nbsp;&nbsp;&nbsp;&nbsp;path = request['path']
+&nbsp;&nbsp;&nbsp;&nbsp;if path == '':
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return yashttpd.redirect('http://yashttpd.no-ip.org/home.html')
+&nbsp;&nbsp;&nbsp;&nbsp;response = {'code':200}
+&nbsp;&nbsp;&nbsp;&nbsp;if path in whitelist:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;gzipped = path + '.gz'
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if path_exists(gzipped) and time_modified(path) &lt;= time_modified(gzipped):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = open(gzipped)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = yashttpd.make_gzipped(path)
+&nbsp;&nbsp;&nbsp;&nbsp;elif path == 'echo':
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;content = '&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;body&gt;&lt;code&gt;{}&lt;/code&gt;&lt;/body&gt;&lt;/html&gt;'
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;content = content.format(json.dumps(request, indent=4, sort_keys=True).replace(' '*4, '&nbsp;'*4).replace('\n', '&lt;br&gt;'))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response['content'] = content
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;yashttpd.set_type(response, 'text/html')
+&nbsp;&nbsp;&nbsp;&nbsp;else:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return 404 #Not Found!
+&nbsp;&nbsp;&nbsp;&nbsp;return response
+
+yashttpd.yashttpd(handler, host='0.0.0.0', port=80)
+
+</pre>
+</body>
+</html>

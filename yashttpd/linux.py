@@ -1,20 +1,10 @@
-import socket, errno, json, select, sys, collections, logging
+import socket, errno, json, select, sys, logging
 
 def error_bypass(handler):
-    def func(*args, **kwds):
-        data = args[0]
-        if data['type'] == 'error':
-            data['headers'] = {}
-            return data
-        #if data['type']=='keepalive':
-        #    return data
-        result = handler(data)
-        if type(result)==dict:
-            result['type'] = 'response'
-        if type(result)==int:
-            result = {'type':'error', 'value':result}
-        result = collections.defaultdict(dict, result)
-        return result
+    def func(request):
+        if type(request) == int:
+            return request
+        return handler(request)
     return func
 
 def server_loop(listener, reader, sender, handler, modifier):

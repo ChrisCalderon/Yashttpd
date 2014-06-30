@@ -17,21 +17,16 @@ def sender(client, response):
     """Generates and sends a response to the client. The response
     argument to this function must be a JSON object."""
 
-    #if response['type'] == 'keepalive':
-    #    client.send('')
-    #    return 1
-    if response['type'] == 'error' and response['value']=='bad':
+    if response == 0:
         return 0
-    elif response['type'] == 'error':
-        code = response['value']
-    else:
-        code = response['code']
+    if type(response) == int:
+        return sender(client, {'code':response, 'content':(ERROR % ((response,)+HTTP_CODES[response])), 'headers':{}})
+    code = response['code']
     status, description = HTTP_CODES[code]
     headers = time.strftime(COMMON.format(code, status), time.gmtime())
-    if response['type'] == 'error':
-        content = ERROR % (code, status, description)
-    else:
-        content = response['content']
+    content = response.get('content', '')
+    if 'headers' not in response:
+        response['headers'] = {}
     if type(content)==str:
         l = len(content)
     elif type(content)==file:
@@ -41,13 +36,12 @@ def sender(client, response):
         response['headers']['Content-Type'] = typ
         if encoding:
             response['headers']['Content-Encoding'] = encoding
+
     response['headers']['Content-Length'] = str(l)
     headers += '\r\n'.join(': '.join(i) for i in response['headers'].items()) + '\r\n\r\n'
     if type(content)==str:
-        print 'sending:'
-        print headers+content
         client.send(headers+content)
-        if response['type']=='error':
+        if response['code'] > 307:
             return 0
     elif type(content)==file:
         client.send(headers)

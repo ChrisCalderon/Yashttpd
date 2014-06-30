@@ -22,7 +22,7 @@ def reader(client):
             err = e.args[0]
             if err not in [errno.EAGAIN,errno.EWOULDBLOCK]:
                 logging.exception(e)
-                return {"type":"error", "value":"bad"}
+                return 0
         else:
             break
 
@@ -35,14 +35,14 @@ def reader(client):
     if request_check is None:
         print 'failed request_check'
         print message
-        return {"type":"error", "value":400}
+        return 400
 
     ## This makes sure there is an end to the headers in the
     ## request. If there isn't, and error is returned!
     header_end = message.find("\r\n\r\n")
     if header_end == -1:
         print 'no header end'
-        return {"type":"error", "value":400}
+        return 400
 
     ## Next, any headers spanning multiple lines are turned
     ## into headers spanning one line only. 
@@ -65,7 +65,7 @@ def reader(client):
             print last_match_end, match_start
             print message[:last_match_end]
             print message[match_start:match_end]
-            return {"type":"error", "value":400}
+            return 400
         ## don't look past the end of the headers
         if match.span()[1] <= header_end+2:
             request['headers'].update([match.groups()])
