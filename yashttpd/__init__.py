@@ -5,6 +5,8 @@ from reader import reader
 
 if 'linux' in sys.platform:
 	from linux import server_loop
+elif sys.platform == 'win32':
+    from windows import server_loop
 else:
 	print "yashttpd is not available in your platform!"
 	sys.exit(1)
