@@ -39,7 +39,6 @@ def get_clients(listener, mapping):
                 else:
                     break
             else:
-                print "accepted connection from", addr
                 mapping[sock.fileno()] = Client(sock, addr)
 
 def clients_with_messages(mapping):
