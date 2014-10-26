@@ -1,4 +1,4 @@
-import mimetypes, time, socket, os
+import mimetypes, time, socket, os, sys
 ERROR = """\
 <html>
 <body>
@@ -7,11 +7,10 @@ ERROR = """\
 </body>
 </html>"""
 COMMON = '''\
-HTTP/1.1 {} {}\r
+HTTP/1.0 {} {}\r
 Server: yashttpd\r
 Date: %a, %d %b %Y %H:%M:%S GMT\r
-Accept-Ranges: bytes\r
-Connection: keep-alive\r
+Connection: close\r
 '''
 def sender(client, response):
     """Generates and sends a response to the client. The response
@@ -39,17 +38,17 @@ def sender(client, response):
 
     response['headers']['Content-Length'] = str(l)
     headers += '\r\n'.join(': '.join(i) for i in response['headers'].items()) + '\r\n\r\n'
+    print headers
     if type(content)==str:
         client.send(headers+content)
-        if response['code'] > 307:
-            return 0
     elif type(content)==file:
         client.send(headers)
         data = content.read(2048)
         while data:
+            sys.stdout.write(data)
             client.send(data)
             data = content.read(2048)
-    return 1
+    print
 
 #Copied these codes verbatim from line 512 of
 #http://hg.python.org/cpython/file/2.7/Lib/BaseHTTPServer.py
