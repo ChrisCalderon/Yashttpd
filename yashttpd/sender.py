@@ -1,28 +1,42 @@
-import mimetypes, time, socket, os, sys
-ERROR = """\
+import mimetypes
+import time
+import socket
+import os
+import sys
+
+ERROR = '''\
 <html>
 <body>
 <h1>%d ERROR: %s</h1>
 <p>%s</p>
 </body>
-</html>"""
+</html>'''
 COMMON = '''\
 HTTP/1.0 {} {}\r
 Server: yashttpd\r
 Date: %a, %d %b %Y %H:%M:%S GMT\r
 Connection: close\r
 '''
-def sender(client, response):
-    """Generates and sends a response to the client. The response
-    argument to this function must be a JSON object."""
 
-    if response == 0:
-        return 0
+def sender(client, response):
+    '''
+    Generates and sends a response to the client. The response
+    argument to this function must be a JSON object.
+    '''
     if type(response) == int:
-        return sender(client, {'code':response, 'content':(ERROR % ((response,)+HTTP_CODES[response])), 'headers':{}})
+        return sender(
+            client,
+            {
+                'code':response,
+                'content':(ERROR % ((response,)+HTTP_CODES[response])),
+                'headers':{}
+            }
+        )
     code = response['code']
     status, description = HTTP_CODES[code]
-    headers = time.strftime(COMMON.format(code, status), time.gmtime())
+    headers = time.strftime(
+        COMMON.format(code, status),
+        time.gmtime())
     content = response.get('content', '')
     if 'headers' not in response:
         response['headers'] = {}
@@ -37,9 +51,11 @@ def sender(client, response):
             response['headers']['Content-Encoding'] = encoding
 
     response['headers']['Content-Length'] = str(l)
-    headers += '\r\n'.join(': '.join(i) for i in response['headers'].items()) + '\r\n\r\n'
+    headers += '\r\n'.join(': '.join(i) for i in response['headers'].items())
+    headers += '\r\n\r\n'
     print headers
     if type(content)==str:
+        print content
         client.send(headers+content)
     elif type(content)==file:
         client.send(headers)
@@ -48,7 +64,7 @@ def sender(client, response):
             sys.stdout.write(data)
             client.send(data)
             data = content.read(2048)
-    print
+        print
 
 #Copied these codes verbatim from line 512 of
 #http://hg.python.org/cpython/file/2.7/Lib/BaseHTTPServer.py

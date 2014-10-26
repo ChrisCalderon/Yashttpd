@@ -1,15 +1,21 @@
-import socket, errno, collections, re, logging
+import socket
+import errno
+import collections
+import re
+import logging
 
 REQUEST = re.compile(
-    "^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) "
-    "/(?P<path>.*?) "
-    "(?P<version>HTTP/1\.1)\r\n"
+    '^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) '
+    '/(?P<path>.*?) '
+    '(?P<version>HTTP/1\.1)\r\n'
 )
-MULTILINE = re.compile(r"\r\n\s+")
-HEADERS = re.compile(r"(?P<name>[\w\-]*?):\s+(?P<value>.*?)\r\n")
+MULTILINE = re.compile(r'\r\n\s+')
+HEADERS = re.compile(r'(?P<name>[\w\-]*?):\s+(?P<value>.*?)\r\n')
 
 def reader(client):
-    """Attempts to parse an HTTP message from client into a JSON object."""
+    '''
+    Attempts to parse an HTTP message from client into a JSON object.
+    '''
     ## Requests should totatally fit within the recv buffer
     size = client.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
     ## Sometimes the client isn't really ready to be read,
@@ -78,12 +84,3 @@ def reader(client):
     request['entity'] = message[header_end+4:]
     return request
 
-if __name__ == "__main__":
-    import linux
-    f = lambda *x: None
-    s = socket.socket()
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(('',8080))
-    s.listen(5)
-
-    linux.server_loop(s, reader, f, f)
