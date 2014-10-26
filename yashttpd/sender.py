@@ -53,19 +53,15 @@ def sender(client, response):
     response['headers']['Content-Length'] = str(l)
     headers += '\r\n'.join(': '.join(i) for i in response['headers'].items())
     headers += '\r\n\r\n'
-    print headers
     if type(content)==str:
-        print content
         client.send(headers+content)
     elif type(content)==file:
         client.send(headers)
         data = content.read(2048)
         while data:
-            sys.stdout.write(data)
             client.send(data)
             data = content.read(2048)
-        print
-
+            
 #Copied these codes verbatim from line 512 of
 #http://hg.python.org/cpython/file/2.7/Lib/BaseHTTPServer.py
 HTTP_CODES = {

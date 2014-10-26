@@ -2,7 +2,6 @@ import socket
 import errno
 import collections
 import re
-import logging
 
 REQUEST = re.compile(
     '^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) '
@@ -39,15 +38,12 @@ def reader(client):
     ## an error is returned.
     request_check = REQUEST.search(message)
     if request_check is None:
-        print 'failed request_check'
-        print message
         return 400
 
     ## This makes sure there is an end to the headers in the
     ## request. If there isn't, and error is returned!
     header_end = message.find("\r\n\r\n")
     if header_end == -1:
-        print 'no header end'
         return 400
 
     ## Next, any headers spanning multiple lines are turned
@@ -67,10 +63,6 @@ def reader(client):
         match_start, match_end = match.span()
         ## It is bad to have junk between headers!
         if match_start != last_match_end:
-            print 'junk between headers'
-            print last_match_end, match_start
-            print message[:last_match_end]
-            print message[match_start:match_end]
             return 400
         ## don't look past the end of the headers
         if match.span()[1] <= header_end+2:
