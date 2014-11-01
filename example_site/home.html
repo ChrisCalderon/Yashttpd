@@ -1,21 +1,56 @@
 <!DOCTYPE html>
 <html>
-<body style="text-align:center;">
+<head>
+	<title> Yashttpd </title>
+	<style>
+		body {
+			text-align: center;
+			font-family: "Arial Black", Gadget, sans-serif;
+		}
+		header {
+			width: 100%;
+			height: 10%;
+		}
+		section {
+			width: 100%;
+			height: 40%;
+		}
+		footer {
+			width: 100%;
+			height: 10%;
+		}
+		iframe {
+			border: none;
+			width: 55%;
+			height: 350px;
+		}
+	</style>
+</head>
+<body >
 <a href="https://github.com/ChrisCalderon/Yashttpd">
 <img style="position:absolute;top:0;right:0;border:0;" src="https://camo.githubusercontent.com/a6677b08c955af8400f44c6298f40e7d19cc5b2d/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677261795f3664366436642e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png">
 </a>
-<h1>ECHO SERVER</h1>
+<header>
+	<h1>Yashttpd</h1>
+</header>
+<section>
 <p>This is how requests are parsed:</p>
-<iframe src="echo" style="border:none;width:40%;height:325px;" scrolling="off">
+<iframe src="echo" scrolling="off">
     If you see the text, your browser doesn't support iframes!
 </iframe>
-<p>The whole code for this site is <a href="myhandler.html">here</a>!</p>
-<p>This is all built with Yashttpd. Find it in my GitHub repository by clicking the ribbon above!</p>
+</section>
+<hr>
+<section>
 <form action="dbget" method="post" target="myframe">
     Enter a key to look up in my local truthcoin database: <input type="text" name="key" value="address"><input type="submit" value="Submit">
 </form>
-<iframe style="border:none;width:40%;height:325px;" name="myframe">
+<iframe name="myframe" scrolling="off">
     If you see the text, your browser doesn't support iframes!
 </iframe>
+</section>
+<footer>
+<p>The whole code for this site is <a href="myhandler.html">here</a>!</p>
+<p>This is all built with Yashttpd. Find it in my GitHub repository by clicking the ribbon above!</p>
+</footer>
 </body>
 </html>
