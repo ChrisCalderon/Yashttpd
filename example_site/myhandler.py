@@ -40,28 +40,10 @@ def echo(request):
         symbols_translate(
             json.dumps(request, indent=4, sort_keys=True)))
 
-def send_command(host, port, cmd):
-    conn = socket.create_connection((host, port))
-    cmd = json.dumps(cmd)
-    conn.sendall(str(len(cmd)).rjust(5, '0')+cmd)
-    length = int(conn.recv(5))
-    resp = ''
-    while length - len(resp):
-        try:
-            resp += conn.recv(length - len(resp))
-        except socket.error as exc:
-            logging.exception(exc)
-            logging.info(resp)
-            break
-    try:
-        return json.loads(resp)
-    except:
-        return resp
-
 def handler(request):
     path = request['path']
     if path == '':
-        return yashttpd.redirect('http://yashttpd.no-ip.org/home.html')
+        return yashttpd.redirect('http://127.0.0.1/home.html')
     response = {'code':200}
     if path in ['home.html', 'favicon.ico']:
         response['content'] = open(path)
@@ -72,17 +54,6 @@ def handler(request):
     elif path == 'echo':
         response['content'] = echo(request)
         yashttpd.set_type(response, 'text/html')
-    elif path == 'dbget':
-        key = urlparse.parse_qs(request['entity'])['key'][0]
-        if key =='privkey':
-            data = 'nope!'
-        else:
-            data = send_command(
-                '127.0.0.1',
-                8898,
-                {'type':'get','args':[key]})
-        response['content'] = str(data)
-        yashttpd.set_type(response, 'text/plain')
     else:
         return 404 #Not Found!
     return response
