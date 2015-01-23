@@ -35,8 +35,8 @@ def symbols_translate(string):
     return string
 
 def echo(request):
-    echo = '<!DOCTYPE html><html><body><code>{}</code></body></html>'
-    return echo.format(
+    result = '<!DOCTYPE html><html><body><code>{}</code></body></html>'
+    return result.format(
         symbols_translate(
             json.dumps(request, indent=4, sort_keys=True)))
 
@@ -57,5 +57,5 @@ def handler(request):
     else:
         return 404 #Not Found!
     return response
-
-yashttpd.yashttpd(handler, host='0.0.0.0', port=80)
+if __name__ == '__main__':
+    yashttpd.yashttpd(handler, host='127.0.0.1', port=80)
