@@ -1,78 +1,87 @@
 import socket
 import errno
-import collections
-import re
 
-REQUEST = re.compile(
-    '^(?P<method>OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) '
-    '/(?P<path>.*?) '
-    '(?P<version>HTTP/1\.1)\r\n'
+VALID_METHODS = (
+    b'OPTIONS',
+    b'GET',
+    b'HEAD',
+    b'POST',
+    b'PUT',
+    b'DELETE',
+    b'TRACE',
+    b'CONNECT',
 )
-MULTILINE = re.compile(r'\r\n\s+')
-HEADERS = re.compile(r'(?P<name>[\w\-]*?):\s+(?P<value>.*?)\r\n')
+
+CRLF       = b'\r\n'
+LWS        = b' \t'
+SPACE      = b' '
+HEADER_LEN = 2048
+
+def reduce_inner_whitespace(field_value):
+    result = bytearray()
+    for c in field_value:
+        if c in LWS:
+            if not result.endswith(SPACE):
+                result.append(SPACE)
+        else:
+            result.append(c)
+
+def char_check(field_name):
+    for c in field_name:
+        if 96 < c < 123:
+            continue
+        Elif 64 < c < 91:
+            continue
+        elif c == 45:
+            continue
+        else:
+            return False
+    return True
 
 def reader(client):
-    '''
-    Attempts to parse an HTTP message from client into a JSON object.
-    '''
-    ## Requests should totatally fit within the recv buffer
-    size = client.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-    ## Sometimes the client isn't really ready to be read,
-    ## even though epoll says it is. So this just repeatedly
-    ## tries to read stuff until it works or breaks.
-    while True:
-        try:
-            message = client.recv(size)
-        except socket.error as e:
-            err = e.args[0]
-            if err not in [errno.EAGAIN,errno.EWOULDBLOCK]:
-                logging.exception(e)
-                return 0
-        else:
-            break
+    '''Attempts to parse an HTTP message from client into a JSON object.'''
+    request_line = client.readline(HEADER_LEN)
+    if not request_line.endsith(CRLF):
+        return 414 #URI too long (is this the correct response???)
 
-    #if message.strip()=="":
-    #    return {"type":"keepalive", "value":None}
-    ## This checks for a proper request line and parses it
-    ## at the same time. If there is no proper request line,
-    ## an error is returned.
-    request_check = REQUEST.search(message)
-    if request_check is None:
+    request_parts = request_line.rstrip(CRLF).split(b' ')
+    if request_parts[0] not in VALID_METHODS:
+        return 400 #Bad Request
+
+    if len(request_parts) != 3:
         return 400
 
-    ## This makes sure there is an end to the headers in the
-    ## request. If there isn't, and error is returned!
-    header_end = message.find("\r\n\r\n")
-    if header_end == -1:
-        return 400
+    message_json = {
+        'method': request_parts[0], 
+        'uri': request_parts[1],
+        'version': request_parts[2],
+    }
 
-    ## Next, any headers spanning multiple lines are turned
-    ## into headers spanning one line only. 
-    def repl(match):
-        a, b = match.span()
-        if b <= header_end:
-            return ","
+    next_line = client.readline(HEADER_LEN)
+    last_header = None
+    header_json = {}
+    while next_line != CRLF:
+        if not next_line.endswith(CRLF):
+            return 431
+        elif last_header and next_line[0] in LWS:
+            next_line = reduce_inner_whitespace(next_line.lstrip(LWS))
+            header_json[last_header] += ',' +  next_line
         else:
-            return message[a:b]
-    message = MULTILINE.sub(repl, message)
+            field_name, field_value = next_line.split(b': ')
+            if char_check(field_name):
+                last_header = field_name
+                header_json[last_header] = field_value
+            else:
+                return 400
+            
+    message_json['headers'] = header_json
 
-    request = collections.defaultdict(dict,request_check.groupdict())
-    request["type"] = "request"
-    last_match_end = request_check.span()[1]
-    for match in HEADERS.finditer(message):
-        match_start, match_end = match.span()
-        ## It is bad to have junk between headers!
-        if match_start != last_match_end:
-            return 400
-        ## don't look past the end of the headers
-        if match.span()[1] <= header_end+2:
-            request['headers'].update([match.groups()])
-            last_match_end = match_end
-        else:
-            break
+    
+    body_len = header_json.get(b'Content-Length', 0)
+    if body_len:
+        body_data = bytearray()
+        while len(body_data) < body_len:
+            body_data.extend(client.read(body_len))
+        message_json['body'] = body_data
 
-    ## Anything left over is just added to the result.
-    ## This might be empty!!!
-    request['entity'] = message[header_end+4:]
-    return request
-
+    return message_json
